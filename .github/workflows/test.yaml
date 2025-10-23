@@ -43,7 +43,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          version: 2.12.2 # datasource=github-releases depName=goreleaser/goreleaser
+          version: 2.12.6 # datasource=github-releases depName=goreleaser/goreleaser
           args: build --clean --snapshot --single-target --output s3-proxy
 
       - name: Test the output
