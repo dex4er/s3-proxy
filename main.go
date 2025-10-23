@@ -48,10 +48,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&port, "port", "8080", "HTTP server port")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "Log level (debug, info, warn, error)")
 
-	if err := rootCmd.MarkPersistentFlagRequired("bucket"); err != nil {
-		panic(err)
-	}
-
 	if err := viper.BindPFlag("bucket", rootCmd.PersistentFlags().Lookup("bucket")); err != nil {
 		panic(err)
 	}
