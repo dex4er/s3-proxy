@@ -2,10 +2,10 @@ FROM scratch
 
 WORKDIR /
 
-COPY ./bootstrap /entrypoint
+COPY ./s3-proxy /s3-proxy
 COPY ./LICENSE /README.md /
 
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/s3-proxy"]
 
 LABEL \
   maintainer="Piotr Roszatycki <piotr.roszatycki@gmail.com>" \
