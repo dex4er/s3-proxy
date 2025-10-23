@@ -6,6 +6,11 @@ s3-proxy
 *.dylib
 dist/
 
+# Temporary files
+*.log
+*.tmp
+*.temp
+
 # Test binary
 *.test
 
