@@ -111,6 +111,7 @@ func runServer() error {
 
 	s3Client = s3.NewFromConfig(cfg)
 
+	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/", loggingMiddleware(handleRequest))
 
 	addr := fmt.Sprintf(":%s", port)
@@ -155,6 +156,10 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			"user_agent", r.UserAgent(),
 		)
 	}
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
