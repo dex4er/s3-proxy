@@ -1,0 +1,17 @@
+FROM scratch
+
+WORKDIR /
+
+COPY ./bootstrap /entrypoint
+COPY ./LICENSE /README.md /
+
+ENTRYPOINT ["/entrypoint"]
+
+LABEL \
+  maintainer="Piotr Roszatycki <piotr.roszatycki@gmail.com>" \
+  org.opencontainers.image.description="S3 proxy" \
+  org.opencontainers.image.licenses="MIT" \
+  org.opencontainers.image.source=https://github.com/dex4er/s3-proxy \
+  org.opencontainers.image.title=s3-proxy \
+  org.opencontainers.image.url=https://github.com/dex4er/s3-proxy \
+  org.opencontainers.image.vendor=dex4er
