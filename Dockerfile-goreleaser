@@ -1,7 +1,13 @@
+FROM alpine:3.22.2 AS certs
+
+RUN apk --no-cache add ca-certificates
+
+
 FROM scratch
 
 WORKDIR /
 
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY ./s3-proxy /s3-proxy
 COPY ./LICENSE /README.md /
 
