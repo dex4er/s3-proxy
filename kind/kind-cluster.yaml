@@ -5,6 +5,12 @@ name: dev-s3-proxy
 nodes:
   - role: control-plane
     image: kindest/node:v1.34.0
+    extraPortMappings:
+      - containerPort: 31080
+        hostPort: 31080
+    extraMounts:
+      - hostPath: ./.data
+        containerPath: /mnt/data
 
 networking:
   kubeProxyMode: nftables

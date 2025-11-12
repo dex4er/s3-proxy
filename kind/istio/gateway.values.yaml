@@ -1,0 +1,8 @@
+service:
+  type: NodePort
+  ports:
+    - name: http
+      port: 31080
+      protocol: TCP
+      targetPort: 31080
+      nodePort: 31080

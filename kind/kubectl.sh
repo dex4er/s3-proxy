@@ -11,14 +11,8 @@ fi
 
 if [[ -d "$HOME/.kube/kind" ]]; then
   kubeconfig="$HOME/.kube/kind/$name"
-  test -d "$kubeconfig" && exit 1
-  rm -f "$kubeconfig"
 else
   kubeconfig="$HOME/.kube/config"
 fi
 
-kind delete cluster --name "$name" --kubeconfig "$kubeconfig"
-
-if [[ -f $kubeconfig && $kubeconfig != "$HOME/.kube/config" ]]; then
-  rm -f "$kubeconfig"
-fi
+kubectl --context "kind-$name" --kubeconfig "$kubeconfig" "$@"

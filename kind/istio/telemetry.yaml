@@ -1,0 +1,8 @@
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: access-log
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy

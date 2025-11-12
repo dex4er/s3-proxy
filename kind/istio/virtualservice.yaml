@@ -1,0 +1,20 @@
+## Catch-all VirtualService to return 404 for unmatched requests
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: service-not-found
+  namespace: istio-system
+spec:
+  gateways:
+    - istio-system/ingress
+  hosts:
+    - "*"
+  http:
+    - match:
+        - uri:
+            prefix: /
+      directResponse:
+        status: 404
+        body:
+          string: Service Not Found

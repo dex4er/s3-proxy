@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-config=${1:-$(dirname "$0")/kind-cluster.yaml}
+config="$(dirname "$0")/kind-cluster.yaml"
 name=$(yq .name "$config")
 
 if [[ -z $name ]]; then
