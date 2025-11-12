@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3-proxy
+  labels:
+    app.kubernetes.io/name: s3-proxy
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: s3-proxy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: s3-proxy
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat
+          command:
+            - socat
+            - -d
+            - -d
+            - TCP-LISTEN:8080,reuseaddr,fork
+            - TCP:host.docker.internal:8080
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http

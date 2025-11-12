@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config=${1:-$(dirname "$0")/kind-cluster.yaml}
+name=$(yq .name "$config")
+
+if [[ -z $name ]]; then
+  echo "Cluster name not found in config"
+  exit 1
+fi
+
+if [[ -d "$HOME/.kube/kind" ]]; then
+  kubeconfig="$HOME/.kube/kind/$name"
+else
+  kubeconfig="$HOME/.kube/config"
+fi
+
+kubectl apply --context "kind-$name" --kubeconfig "$kubeconfig" -k "$(dirname "$0")"
