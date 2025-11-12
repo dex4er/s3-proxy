@@ -11,6 +11,9 @@ dist/
 *.tmp
 *.temp
 
+# Persistency for KinD
+.pvc
+
 # Test binary
 *.test
 

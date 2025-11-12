@@ -22,12 +22,14 @@ import (
 var version = "dev"
 
 var (
-	bucketName string
-	region     string
-	port       string
-	logLevel   string
-	s3Client   *s3.Client
-	logger     *slog.Logger
+	bucketName   string
+	region       string
+	port         string
+	logLevel     string
+	endpoint     string
+	usePathStyle bool
+	s3Client     *s3.Client
+	logger       *slog.Logger
 )
 
 var rootCmd = &cobra.Command{
@@ -47,6 +49,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&region, "region", "us-east-1", "AWS region")
 	rootCmd.PersistentFlags().StringVar(&port, "port", "8080", "HTTP server port")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "Log level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "Custom S3 endpoint URL")
+	rootCmd.PersistentFlags().BoolVar(&usePathStyle, "use-path-style", false, "Use path-style addressing for S3")
 
 	if err := viper.BindPFlag("bucket", rootCmd.PersistentFlags().Lookup("bucket")); err != nil {
 		panic(err)
@@ -58,6 +62,12 @@ func init() {
 		panic(err)
 	}
 	if err := viper.BindPFlag("loglevel", rootCmd.PersistentFlags().Lookup("loglevel")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("endpoint", rootCmd.PersistentFlags().Lookup("endpoint")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("use-path-style", rootCmd.PersistentFlags().Lookup("use-path-style")); err != nil {
 		panic(err)
 	}
 }
@@ -72,6 +82,20 @@ func runServer() error {
 	region = viper.GetString("region")
 	port = viper.GetString("port")
 	logLevel = viper.GetString("loglevel")
+	endpoint = viper.GetString("endpoint")
+	usePathStyle = viper.GetBool("use-path-style")
+
+	// Fallback to AWS_ENDPOINT_URL if endpoint is not set
+	if endpoint == "" {
+		endpoint = os.Getenv("AWS_ENDPOINT_URL")
+	}
+
+	// Fallback to AWS_S3_FORCE_PATH_STYLE if use-path-style is not set
+	if !usePathStyle {
+		if pathStyleEnv := os.Getenv("AWS_S3_FORCE_PATH_STYLE"); pathStyleEnv != "" {
+			usePathStyle = strings.ToLower(pathStyleEnv) == "true" || pathStyleEnv == "1"
+		}
+	}
 
 	// Initialize logger
 	var level slog.Level
@@ -105,17 +129,38 @@ func runServer() error {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	s3Client = s3.NewFromConfig(cfg)
+	// Configure S3 client with custom endpoint and path style if provided
+	var s3Options []func(*s3.Options)
+	if endpoint != "" {
+		s3Options = append(s3Options, func(o *s3.Options) {
+			o.BaseEndpoint = aws.String(endpoint)
+		})
+	}
+	if usePathStyle {
+		s3Options = append(s3Options, func(o *s3.Options) {
+			o.UsePathStyle = true
+		})
+	}
+
+	s3Client = s3.NewFromConfig(cfg, s3Options...)
 
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/", loggingMiddleware(handleRequest))
 
 	addr := fmt.Sprintf(":%s", port)
-	logger.Info("Starting S3 proxy server",
-		"address", addr,
-		"bucket", bucketName,
-		"region", region,
-		"loglevel", logLevel)
+	logAttrs := []slog.Attr{
+		slog.String("address", addr),
+		slog.String("bucket", bucketName),
+		slog.String("region", region),
+		slog.String("loglevel", logLevel),
+	}
+	if endpoint != "" {
+		logAttrs = append(logAttrs, slog.String("endpoint", endpoint))
+	}
+	if usePathStyle {
+		logAttrs = append(logAttrs, slog.Bool("use_path_style", usePathStyle))
+	}
+	logger.LogAttrs(context.Background(), slog.LevelInfo, "Starting S3 proxy server", logAttrs...)
 	return http.ListenAndServe(addr, nil)
 }
 
@@ -181,6 +226,8 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
 	}
+
+	logger.Debug("s3.GetObjectInput", "bucket", bucketName, "key", objectKey)
 
 	result, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {

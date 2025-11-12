@@ -15,4 +15,8 @@ else
   kubeconfig="$HOME/.kube/config"
 fi
 
-helm --kube-context "kind-$name" --kubeconfig "$kubeconfig" "$@"
+output=$(helm diff --kube-context "kind-$name" --kubeconfig "$kubeconfig" "$@" --allow-unreleased)
+
+if [[ -n $output ]]; then
+  helm --kube-context "kind-$name" --kubeconfig "$kubeconfig" "$@" --create-namespace --wait
+fi

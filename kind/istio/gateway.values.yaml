@@ -6,3 +6,15 @@ service:
       protocol: TCP
       targetPort: 31080
       nodePort: 31080
+    - name: envoy-admin
+      port: 15000
+      protocol: TCP
+      targetPort: 15000
+
+resources:
+  requests:
+    memory: "0"
+    cpu: "0"
+  limits:
+    memory: 1Gi
+    cpu: "1"

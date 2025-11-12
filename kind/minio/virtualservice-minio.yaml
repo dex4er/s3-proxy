@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: minio
+spec:
+  gateways:
+    - istio-system/ingress
+  hosts:
+    - minio.127.0.0.1.sslip.io
+  http:
+    - route:
+        - destination:
+            host: minio.minio.svc.cluster.local
+            port:
+              number: 9000

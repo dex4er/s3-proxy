@@ -9,8 +9,8 @@ nodes:
       - containerPort: 31080
         hostPort: 31080
     extraMounts:
-      - hostPath: ./.data
-        containerPath: /mnt/data
+      - hostPath: ./.pvc
+        containerPath: /var/local-path-provisioner
 
 networking:
   kubeProxyMode: nftables

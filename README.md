@@ -36,6 +36,12 @@ go build -o s3-proxy
 
 # With debug logging
 ./s3-proxy --bucket my-bucket --region us-west-2 --loglevel debug
+
+# With custom S3 endpoint (e.g., MinIO, S3-compatible service)
+./s3-proxy --bucket my-bucket --region us-west-2 --endpoint https://minio.example.com
+
+# With local MinIO (using path-style addressing)
+./s3-proxy --bucket my-bucket --region us-east-1 --endpoint http://localhost:9000 --use-path-style
 ```
 
 ### Environment Variables
@@ -47,6 +53,8 @@ export S3PROXY_BUCKET=my-bucket
 export S3PROXY_REGION=us-west-2
 export S3PROXY_PORT=8080
 export S3PROXY_LOGLEVEL=info
+export S3PROXY_ENDPOINT=https://s3.custom-domain.com
+export S3PROXY_USE_PATH_STYLE=true
 ./s3-proxy
 ```
 
@@ -58,6 +66,28 @@ export S3PROXY_LOGLEVEL=info
 | `--region` | `S3PROXY_REGION` | `us-east-1` | AWS region |
 | `--port` | `S3PROXY_PORT` | `8080` | HTTP server port |
 | `--loglevel` | `S3PROXY_LOGLEVEL` | `info` | Log level (debug, info, warn, error) |
+| `--endpoint` | `S3PROXY_ENDPOINT` | | Custom S3 endpoint URL (falls back to `AWS_ENDPOINT_URL`) |
+| `--use-path-style` | `S3PROXY_USE_PATH_STYLE` | `false` | Use path-style addressing for S3 (falls back to `AWS_S3_FORCE_PATH_STYLE`) |
+
+## Endpoint Configuration
+
+The S3 endpoint is determined in the following priority order:
+1. `--endpoint` command-line flag
+2. `S3PROXY_ENDPOINT` environment variable
+3. `AWS_ENDPOINT_URL` environment variable (AWS CLI/SDK standard)
+4. Default AWS S3 endpoints (if none specified)
+
+Examples using `AWS_ENDPOINT_URL`:
+
+```bash
+# Using AWS standard environment variables (works with AWS CLI too)
+export AWS_ENDPOINT_URL=http://localhost:9000
+export AWS_S3_FORCE_PATH_STYLE=true
+./s3-proxy --bucket my-bucket
+
+# This is equivalent to:
+./s3-proxy --bucket my-bucket --endpoint http://localhost:9000 --use-path-style
+```
 
 ## AWS Credentials
 
