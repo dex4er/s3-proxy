@@ -17,6 +17,8 @@ resources:
 
 persistence:
   enabled: true
+  volumeName: minio
+  size: 1Gi
 
 users:
   - accessKey: console
