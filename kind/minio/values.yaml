@@ -32,3 +32,6 @@ buckets:
     purge: false
     versioning: false
     objectlocking: false
+
+customCommands:
+  - command: cp /etc/hostname myminio/bucket/test.txt --attr "Content-Type=text/plain"

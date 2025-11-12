@@ -27,4 +27,4 @@ Deploy infra components and proxy to the host for locally ran application:
 
 Access it:
 
-<http://s3-proxy.127.0.0.1.sslip.io:31080/>
+<http://s3-proxy.127.0.0.1.sslip.io:31080/test.txt>
