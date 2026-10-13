@@ -123,6 +123,12 @@ function Invoke-Target-Download {
   Invoke-CommandWithEcho $env:GO -Arguments "mod", "download"
 }
 
+## TARGET test Run tests
+function Invoke-Target-Test {
+  Write-Target "test"
+  Invoke-CommandWithEcho $env:GO -Arguments "test", "./..."
+}
+
 ## TARGET tidy Tidy Go modules
 function Invoke-Target-Tidy {
   Write-Target "tidy"

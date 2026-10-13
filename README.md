@@ -1,11 +1,14 @@
 # S3 Proxy
 
-An HTTP server that proxies GET requests to S3 bucket objects, preserving cache headers and returning generic error messages.
+An HTTP server that proxies GET and HEAD requests to S3 bucket objects, with byte ranges and conditional requests, preserving cache headers and returning generic error messages.
 
 ## Features
 
-- Proxies HTTP GET requests to S3 bucket objects
-- Preserves original Cache-Control headers from S3
+- Proxies HTTP GET and HEAD requests to S3 bucket objects
+- Byte-range requests (`Range`, answered with `206 Partial Content`), which video playback in Safari and on iOS requires
+- Conditional requests (`If-None-Match`, `If-Modified-Since`, `If-Match`, `If-Unmodified-Since`, `If-Range`)
+- Preserves the `Cache-Control`, `Content-Type`, `ETag` and `Last-Modified` headers from S3
+- Works with S3-compatible servers through `--endpoint` and `--path-style`
 - Returns original HTTP status codes (404, 403, etc.) with generic error messages
 - Access logging for all HTTP requests with timing and status information
 - Configurable via command-line flags or environment variables
@@ -83,12 +86,14 @@ export S3PROXY_LOGLEVEL=info
 
 ### Command-Line Flags
 
-| Flag         | Environment Variable | Default     | Description                          |
-|--------------|----------------------|-------------|--------------------------------------|
-| `--bucket`   | `S3PROXY_BUCKET`     | (required)  | S3 bucket name                       |
-| `--region`   | `S3PROXY_REGION`     | `us-east-1` | AWS region                           |
-| `--port`     | `S3PROXY_PORT`       | `8080`      | HTTP server port                     |
-| `--loglevel` | `S3PROXY_LOGLEVEL`   | `info`      | Log level (debug, info, warn, error) |
+| Flag           | Environment Variable | Default      | Description                                             |
+|----------------|----------------------|--------------|---------------------------------------------------------|
+| `--bucket`     | `S3PROXY_BUCKET`     | (required)   | S3 bucket name                                          |
+| `--region`     | `S3PROXY_REGION`     | `us-east-1`  | AWS region                                              |
+| `--port`       | `S3PROXY_PORT`       | `8080`       | HTTP server port                                        |
+| `--loglevel`   | `S3PROXY_LOGLEVEL`   | `info`       | Log level (debug, info, warn, error)                    |
+| `--endpoint`   | `S3PROXY_ENDPOINT`   | AWS endpoint | S3 endpoint URL, for S3-compatible servers              |
+| `--path-style` | `S3PROXY_PATH_STYLE` | `false`      | Put the bucket in the URL path instead of the host name |
 
 ## AWS Credentials
 
@@ -118,6 +123,12 @@ curl http://localhost:8080/path/to/object.txt
 
 # Request with path
 curl http://localhost:8080/images/logo.png
+
+# Request the first two bytes of a video, as Safari does before playing it
+curl -r 0-1 http://localhost:8080/stories/story.mp4
+
+# Request only the headers
+curl -I http://localhost:8080/stories/story.mp4
 ```
 
 ## Error Handling
@@ -126,7 +137,12 @@ The server returns original HTTP status codes with generic error messages:
 
 - **404 Not Found**: "The requested resource was not found"
 - **403 Forbidden**: "Access to the requested resource is forbidden"
+- **405 Method Not Allowed**: "Method not allowed", for anything but GET and HEAD
+- **412 Precondition Failed**: "The precondition given in the request failed"
+- **416 Range Not Satisfiable**: "The requested range is not satisfiable", with `Content-Range: bytes */<size>`
 - **500 Internal Server Error**: "An error occurred while processing your request"
+
+A conditional request whose object has not changed gets `304 Not Modified` with no body.
 
 ## Access Logging
 
@@ -150,13 +166,18 @@ time=2025-10-23T... level=INFO msg="HTTP request" method=GET path=/missing.txt r
 
 ```bash
 # Run without building
-go run main.go --bucket my-bucket --region us-west-2
+go run . --bucket my-bucket --region us-west-2
 
 # Build
 make build
 
-# Run tests (when added)
-go test ./...
+# Run tests
+make test
+
+# Run the tests against S3Mock too
+docker run -d --rm --name s3mock -p 9090:9090 \
+  -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=test-bucket adobe/s3mock:5.2.3
+S3PROXY_TEST_ENDPOINT=http://localhost:9090 make test
 ```
 
 ## License
