@@ -83,12 +83,12 @@ export S3PROXY_LOGLEVEL=info
 
 ### Command-Line Flags
 
-| Flag | Environment Variable | Default | Description |
-|------|---------------------|---------|-------------|
-| `--bucket` | `S3PROXY_BUCKET` | (required) | S3 bucket name |
-| `--region` | `S3PROXY_REGION` | `us-east-1` | AWS region |
-| `--port` | `S3PROXY_PORT` | `8080` | HTTP server port |
-| `--loglevel` | `S3PROXY_LOGLEVEL` | `info` | Log level (debug, info, warn, error) |
+| Flag         | Environment Variable | Default     | Description                          |
+|--------------|----------------------|-------------|--------------------------------------|
+| `--bucket`   | `S3PROXY_BUCKET`     | (required)  | S3 bucket name                       |
+| `--region`   | `S3PROXY_REGION`     | `us-east-1` | AWS region                           |
+| `--port`     | `S3PROXY_PORT`       | `8080`      | HTTP server port                     |
+| `--loglevel` | `S3PROXY_LOGLEVEL`   | `info`      | Log level (debug, info, warn, error) |
 
 ## AWS Credentials
 
