@@ -14,6 +14,15 @@
   "postUpdateOptions": [
     "gomodTidy"
   ],
+  "packageRules": [
+    {
+      "description": "smithy-go lives in its own repository, so the aws-sdk-go-v2 monorepo group from config:recommended misses it. Every SDK update raises the smithy-go requirement anyway, so a separate smithy-go PR only conflicts with the SDK one.",
+      "matchPackageNames": [
+        "github.com/aws/smithy-go"
+      ],
+      "groupName": "aws-sdk-go-v2 monorepo"
+    }
+  ],
   "gitIgnoredAuthors": [
     "41898282+github-actions[bot]@users.noreply.github.com"
   ],
