@@ -9,7 +9,10 @@ on:
       - .editorconfig
       - .gitignore
       - .markdownlint.yaml
+      - .claude/**
       - .trunk/**
+      - AGENTS.md
+      - CLAUDE.md
       - LICENSE
       - README.md
   pull_request:
@@ -24,11 +27,11 @@ jobs:
   test:
     name: Test
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04-arm
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -36,15 +39,20 @@ jobs:
         run: git fetch --force --tags
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      # GoReleaser comes from mise so that its version has a single source
+      # (mise.toml) and the download is verified against mise.lock.
+      - name: Set up mise
+        uses: jdx/mise-action@v5
         with:
-          version: 2.12.6 # datasource=github-releases depName=goreleaser/goreleaser
-          args: build --clean --snapshot --single-target --output s3-proxy
+          version: 2026.10.8 # datasource=github-releases depName=jdx/mise
+          install_args: goreleaser
+
+      - name: Run GoReleaser
+        run: goreleaser build --clean --snapshot --single-target --output s3-proxy
 
       - name: Test the output
         run: |-

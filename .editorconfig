@@ -9,3 +9,6 @@ indent_size = 2
 
 [{Makefile,go.mod,go.sum,*.go}]
 indent_style = tab
+
+[*.ps1]
+end_of_line = crlf
