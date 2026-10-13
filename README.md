@@ -83,12 +83,14 @@ export S3PROXY_LOGLEVEL=info
 
 ### Command-Line Flags
 
-| Flag         | Environment Variable | Default     | Description                          |
-|--------------|----------------------|-------------|--------------------------------------|
-| `--bucket`   | `S3PROXY_BUCKET`     | (required)  | S3 bucket name                       |
-| `--region`   | `S3PROXY_REGION`     | `us-east-1` | AWS region                           |
-| `--port`     | `S3PROXY_PORT`       | `8080`      | HTTP server port                     |
-| `--loglevel` | `S3PROXY_LOGLEVEL`   | `info`      | Log level (debug, info, warn, error) |
+| Flag           | Environment Variable | Default      | Description                                             |
+|----------------|----------------------|--------------|---------------------------------------------------------|
+| `--bucket`     | `S3PROXY_BUCKET`     | (required)   | S3 bucket name                                          |
+| `--region`     | `S3PROXY_REGION`     | `us-east-1`  | AWS region                                              |
+| `--port`       | `S3PROXY_PORT`       | `8080`       | HTTP server port                                        |
+| `--loglevel`   | `S3PROXY_LOGLEVEL`   | `info`       | Log level (debug, info, warn, error)                    |
+| `--endpoint`   | `S3PROXY_ENDPOINT`   | AWS endpoint | S3 endpoint URL, for S3-compatible servers              |
+| `--path-style` | `S3PROXY_PATH_STYLE` | `false`      | Put the bucket in the URL path instead of the host name |
 
 ## AWS Credentials
 

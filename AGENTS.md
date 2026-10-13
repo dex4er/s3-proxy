@@ -159,12 +159,18 @@ s3-proxy/
 Flags are defined with Cobra and bound to Viper, which also reads environment
 variables with the `S3PROXY_` prefix:
 
-| Flag         | Environment variable | Default     | Purpose                          |
-|--------------|----------------------|-------------|----------------------------------|
-| `--bucket`   | `S3PROXY_BUCKET`     | (required)  | S3 bucket name                   |
-| `--region`   | `S3PROXY_REGION`     | `us-east-1` | AWS region                       |
-| `--port`     | `S3PROXY_PORT`       | `8080`      | HTTP listen port                 |
-| `--loglevel` | `S3PROXY_LOGLEVEL`   | `info`      | `debug`, `info`, `warn`, `error` |
+| Flag           | Environment variable | Default     | Purpose                                    |
+|----------------|----------------------|-------------|--------------------------------------------|
+| `--bucket`     | `S3PROXY_BUCKET`     | (required)  | S3 bucket name                             |
+| `--region`     | `S3PROXY_REGION`     | `us-east-1` | AWS region                                 |
+| `--port`       | `S3PROXY_PORT`       | `8080`      | HTTP listen port                           |
+| `--loglevel`   | `S3PROXY_LOGLEVEL`   | `info`      | `debug`, `info`, `warn`, `error`           |
+| `--endpoint`   | `S3PROXY_ENDPOINT`   | AWS         | S3 endpoint URL                            |
+| `--path-style` | `S3PROXY_PATH_STYLE` | `false`     | Path-style addressing (bucket in the path) |
+
+Flag names with a dash map to an underscore in the environment variable
+(`--path-style` is `S3PROXY_PATH_STYLE`) through the key replacer in
+`initConfig()`.
 
 Read configuration through `viper.Get*` in `runServer()`, not through the
 flag variables: a value set only in the environment does not reach the flag

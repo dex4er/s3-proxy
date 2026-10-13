@@ -26,6 +26,8 @@ var (
 	region     string
 	port       string
 	logLevel   string
+	endpoint   string
+	pathStyle  bool
 	s3Client   *s3.Client
 	logger     *slog.Logger
 )
@@ -47,6 +49,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&region, "region", "us-east-1", "AWS region")
 	rootCmd.PersistentFlags().StringVar(&port, "port", "8080", "HTTP server port")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "Log level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "S3 endpoint URL (default: the AWS endpoint for the region)")
+	rootCmd.PersistentFlags().BoolVar(&pathStyle, "path-style", false, "Use path-style addressing (bucket in the URL path)")
 
 	if err := viper.BindPFlag("bucket", rootCmd.PersistentFlags().Lookup("bucket")); err != nil {
 		panic(err)
@@ -60,10 +64,18 @@ func init() {
 	if err := viper.BindPFlag("loglevel", rootCmd.PersistentFlags().Lookup("loglevel")); err != nil {
 		panic(err)
 	}
+	if err := viper.BindPFlag("endpoint", rootCmd.PersistentFlags().Lookup("endpoint")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("path-style", rootCmd.PersistentFlags().Lookup("path-style")); err != nil {
+		panic(err)
+	}
 }
 
 func initConfig() {
 	viper.SetEnvPrefix("S3PROXY")
+	// --path-style is read from S3PROXY_PATH_STYLE.
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 }
 
@@ -72,6 +84,8 @@ func runServer() error {
 	region = viper.GetString("region")
 	port = viper.GetString("port")
 	logLevel = viper.GetString("loglevel")
+	endpoint = viper.GetString("endpoint")
+	pathStyle = viper.GetBool("path-style")
 
 	// Initialize logger
 	var level slog.Level
@@ -105,7 +119,12 @@ func runServer() error {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	s3Client = s3.NewFromConfig(cfg)
+	s3Client = s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+		o.UsePathStyle = pathStyle
+	})
 
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/", loggingMiddleware(handleRequest))
@@ -115,6 +134,8 @@ func runServer() error {
 		"address", addr,
 		"bucket", bucketName,
 		"region", region,
+		"endpoint", endpoint,
+		"path_style", pathStyle,
 		"loglevel", logLevel)
 	return http.ListenAndServe(addr, nil)
 }
