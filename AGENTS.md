@@ -96,10 +96,16 @@ and shown by `s3-proxy --version`.
 To reproduce what a release builds, without publishing:
 
 ```bash
-goreleaser release --snapshot --clean --skip=publish,docker
+goreleaser release --snapshot --clean --skip=publish
 ```
 
-This needs `syft` on `PATH` for the SBOMs.
+This needs `syft` on `PATH` for the SBOMs and a running Docker for the
+images; add `docker` to `--skip` without one.
+
+The container images need no emulation for either platform: the only `RUN`
+in `Dockerfile-goreleaser` is in a stage pinned to `$BUILDPLATFORM`, and the
+final stage is `scratch` with `COPY` alone. Keep it that way, or the release
+job needs QEMU again.
 
 ### Tool Versions
 
@@ -263,8 +269,7 @@ The scan reports replace the body of
 and [discussion #29](https://github.com/dex4er/s3-proxy/discussions/29) (last
 release); the numbers are the `DISCUSSION_NUMBER` env of each workflow.
 
-All jobs run on `ubuntu-26.04-arm`. The release builds the `linux/amd64`
-container image under QEMU for that reason.
+All jobs run on `ubuntu-26.04-arm`.
 
 The automated workflows can be rerun by commenting `/rerun` on their pull
 request. Only users with write access can trigger that: the job condition
