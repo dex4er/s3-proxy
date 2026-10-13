@@ -28,6 +28,16 @@ jobs:
 
     runs-on: ubuntu-26.04-arm
 
+    # S3Mock serves the S3 API for TestS3Mock in s3mock_test.go. It supports
+    # path-style addressing only, which the test client uses.
+    services:
+      s3mock:
+        image: adobe/s3mock:5.2.3
+        env:
+          COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: test-bucket
+        ports:
+          - 9090:9090
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -54,5 +64,21 @@ jobs:
         run: goreleaser build --clean --snapshot --single-target --output s3-proxy
 
       - name: Test the output
-        run: |-
+        run: |
           ./s3-proxy --version 2>&1 | grep "s3-proxy version"
+
+      # The service container is started before the steps but not waited
+      # for, and S3Mock takes a few seconds to come up.
+      - name: Wait for S3Mock
+        run: |
+          for _ in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:9090/favicon.ico && exit 0
+            sleep 1
+          done
+          echo "::error::S3Mock did not start"
+          exit 1
+
+      - name: Run Go tests
+        run: go test -v ./...
+        env:
+          S3PROXY_TEST_ENDPOINT: http://localhost:9090

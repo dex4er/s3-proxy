@@ -73,6 +73,11 @@ download: ## Download Go modules
 	$(call print-target)
 	$(GO) mod download
 
+.PHONY: test
+test: ## Run tests
+	$(call print-target)
+	$(GO) test ./...
+
 .PHONY: tidy
 tidy: ## Tidy Go modules
 	$(call print-target)

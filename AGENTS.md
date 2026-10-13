@@ -6,13 +6,17 @@ This guide helps AI agents understand the S3 Proxy codebase, common
 development tasks, troubleshooting patterns, and key architectural decisions.
 Use this as a reference when working on the project.
 
-**s3-proxy** is a single Go binary that serves HTTP GET requests from the
-objects of one S3 bucket. It passes `Cache-Control`, `Content-Type` and
-`Content-Length` through from S3, maps S3 errors to the matching HTTP status
-with a generic message, and is published as a binary and as a container
-image.
+**s3-proxy** is a single Go binary that serves HTTP GET and HEAD requests from
+the objects of one S3 bucket, with byte ranges and conditional requests, so
+that video plays in Safari and on iOS. It passes the object metadata
+(`Cache-Control`, `Content-Type`, `ETag`, `Last-Modified`) through from S3,
+maps S3 errors to the matching HTTP status with a generic message, and is
+published as a binary and as a container image.
 
 - **`main.go`** — Single entry point; all application logic
+- **`main_test.go`** — Unit tests with a fake S3 client
+- **`s3mock_test.go`** — Integration test against S3Mock, skipped without
+  `S3PROXY_TEST_ENDPOINT`
 - **`go.mod`** / **`go.sum`** — Go module dependencies
 - **`Makefile`** / **`Makefile.ps1`** — Build and development targets
 - **`.goreleaser.yaml`** — Release build configuration (binaries, SBOMs,
@@ -73,6 +77,7 @@ mise exec -- make build
 ```bash
 make download          # Download Go modules
 make build             # Build binary for current platform (via goreleaser)
+make test              # Run tests
 make install           # Build and install binary to $PATH
 make tidy              # Tidy Go modules
 make upgrade           # Upgrade Go modules
@@ -139,6 +144,8 @@ make build
 ```text
 s3-proxy/
 ├── main.go                 # Application entry point
+├── main_test.go            # Unit tests
+├── s3mock_test.go          # Integration test against S3Mock
 ├── go.mod                  # Go module definition
 ├── go.sum                  # Dependency checksums
 ├── Makefile                # Build targets
@@ -189,8 +196,38 @@ config, IAM role).
 
 ### Changing Error Mapping
 
-`handleS3Error()` maps `smithy.APIError` codes to HTTP statuses. Keep the
-response bodies generic: the details go to the log, never to the client.
+`handleS3Error()` maps S3 errors to HTTP statuses, by the HTTP status of the
+S3 response where there is one and by the `smithy.APIError` code otherwise.
+Keep the response bodies generic: the details go to the log, never to the
+client.
+
+To the SDK every non-2xx response is an error, including `304`, and
+`HeadObject` errors have no body, so their code is only `NotFound` or
+`Forbidden`. A mapping keyed on codes alone answers both with `500`; add a
+case to `TestErrorMapping` for every code or status you map.
+
+### Running Tests
+
+```bash
+make test
+```
+
+This runs the unit tests in `main_test.go`, which replace the S3 client
+with `fakeS3` through the `s3API` interface. `TestS3Mock` in
+`s3mock_test.go` runs the proxy against a real S3 API and is skipped unless
+`S3PROXY_TEST_ENDPOINT` is set. The Test workflow runs it against S3Mock;
+locally:
+
+```bash
+docker run -d --rm --name s3mock -p 9090:9090 \
+  -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=test-bucket adobe/s3mock:5.2.3
+S3PROXY_TEST_ENDPOINT=http://localhost:9090 mise exec -- go test -v ./...
+```
+
+S3Mock supports path-style addressing only, which is why the test client,
+and any proxy pointed at S3Mock, needs path-style on. It also sends no
+headers with a `304`, so the headers a `304` carries are covered by the unit
+tests only.
 
 ### Updating Dependencies
 
@@ -228,7 +265,10 @@ curl -i http://localhost:8080/path/to/object
    (`aws sts get-caller-identity` with the same environment)
 3. Every request returns 403 — the credentials lack `s3:GetObject` on the
    bucket, or the region does not match the bucket
-4. Requests are not logged — access logs are written at `debug` level
+. Video does not play in Safari or on iOS — check that
+   `curl -r 0-1 -D - -o /dev/null <url>` answers `206` with a `Content-Range`,
+   and that the object has a video `Content-Type` in S3: one uploaded as
+   `application/octet-stream` does not play even with working ranges
 
 ### Linting Errors
 
@@ -258,7 +298,7 @@ The project uses:
 
 | Workflow                  | Purpose                                                             |
 |---------------------------|---------------------------------------------------------------------|
-| `test.yaml`               | Snapshot build and `--version` smoke test                           |
+| `test.yaml`               | Snapshot build, `--version` smoke test, Go tests with S3Mock        |
 | `trunk-check.yaml`        | All Trunk linters                                                   |
 | `release.yaml`            | GoReleaser release on a `v*` tag, SBOMs, attestation                |
 | `tag-semver.yaml`         | Manual: bump and push the next semver tag                           |
@@ -309,15 +349,40 @@ logged instead.
 `/health` returns `200 OK` without touching S3, so a liveness probe does not
 depend on AWS availability or credentials.
 
-### GET Only
+### GET and HEAD Only
 
-Any method other than GET returns `405`. The proxy is read-only by design.
+Any other method returns `405` with `Allow: GET, HEAD`. The proxy is
+read-only by design. HEAD goes to `HeadObject`, not to a `GetObject` whose
+body is thrown away.
+
+### Byte Ranges and Conditional Requests
+
+Safari and AVPlayer start video playback with `Range: bytes=0-1` and do not
+play a response that is not `206`, so a proxy without ranges breaks video
+while images keep working. Most of the work is left to S3:
+
+- A single byte range and the `If-Match`, `If-None-Match`,
+  `If-Modified-Since` and `If-Unmodified-Since` headers are passed to S3,
+  which answers `206`, `304` or `412`. As RFC 9110 requires, a date
+  condition is dropped when its ETag counterpart is present.
+- A multi-range request or a `Range` that does not parse is dropped, and the
+  client gets the whole object with `200`. S3 serves one range per request,
+  and RFC 9110 allows ignoring a `Range`.
+- **S3 has no `If-Range`**, so the proxy evaluates it: the ranged response is
+  fetched first and its `ETag` / `Last-Modified` compared with `If-Range`;
+  on a mismatch the body is discarded and the whole object fetched instead.
+  Comparing the response rather than asking first keeps the common case to
+  one request and leaves no window for the object to change in between.
+- A range past the end is `InvalidRange` to S3. The `416` has to carry the
+  object size in `Content-Range`, which the S3 error does not, so the proxy
+  asks `HeadObject` for it, and serves the whole object instead when
+  `If-Range` does not match.
 
 ## Best Practices
 
 1. **Run validation before committing:** `trunk check`
 2. **Keep `go.mod` tidy:** run `make tidy` after dependency changes
-3. **Test against a real bucket** before submitting PRs
+3. **Run `make test`**, and test against a real bucket before submitting PRs
 4. **Follow existing patterns** — the codebase is intentionally minimal
 5. **Use `gofmt`** for formatting (enforced by Trunk)
 6. **Do not use Anthropic Fable for coding tasks** — Fable may be used only
