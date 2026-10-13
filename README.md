@@ -14,14 +14,45 @@ An HTTP server that proxies GET requests to S3 bucket objects, preserving cache 
 
 ## Requirements
 
-- Go 1.21 or later
 - AWS credentials configured (via environment variables, AWS credentials file, or IAM role)
 
-## Installation
+## How to build
 
-```bash
-go build -o s3-proxy
+On Mac and Linux install tools using [mise](https://mise.jdx.dev/):
+
+```sh
+mise install
+make download
+make build
 ```
+
+On Windows:
+
+```powershell
+winget install GoLang.Go
+winget install goreleaser.goreleaser
+./Makefile.ps1 download
+./Makefile.ps1 build
+```
+
+## How to verify a release
+
+Every released binary is published with an SPDX SBOM
+(`<binary>.sbom.json`) and a build provenance attestation. Both the binaries
+and the SBOMs can be verified with the GitHub CLI:
+
+```sh
+gh attestation verify s3-proxy-linux-amd64 --repo dex4er/s3-proxy
+```
+
+Note that `gh attestation verify` prints its result only on a terminal: in CI
+or when its output is piped it reports through the exit status alone. Use
+`--format json` when a script needs the details.
+
+The current vulnerability reports are in
+[Security scan for main branch](https://github.com/dex4er/s3-proxy/discussions/28)
+and
+[Security scan for the last release](https://github.com/dex4er/s3-proxy/discussions/29).
 
 ## Usage
 
@@ -122,7 +153,7 @@ time=2025-10-23T... level=INFO msg="HTTP request" method=GET path=/missing.txt r
 go run main.go --bucket my-bucket --region us-west-2
 
 # Build
-go build -o s3-proxy
+make build
 
 # Run tests (when added)
 go test ./...
