@@ -2,9 +2,8 @@ name: Test
 
 on:
   push:
-    branches-ignore:
-      - automated/*
-      - renovate/*
+    branches:
+      - main
     paths-ignore:
       - .editorconfig
       - .gitignore
